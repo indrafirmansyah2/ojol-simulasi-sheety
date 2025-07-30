@@ -1,66 +1,71 @@
 import streamlit as st
-import datetime
-import pandas as pd
 import requests
+import datetime
 
-SHEET_URL = "https://api.sheety.co/3c5236c6b6460d3f9f3fcb96a92ad3aa/simulasiPendapatanOjolMaxim/sheet1"
+st.set_page_config(page_title="Simulasi Ojol Maxim", page_icon="🛵")
 
-st.set_page_config(page_title="Simulasi Ojol Maxim", layout="centered")
 st.title("🛵 Simulasi Penghasilan Ojol Maxim")
 
-# Input Data
-penghasilan_kotor = st.number_input("Penghasilan Kotor (per hari):", min_value=0, value=80000, step=1000)
-tanggal = st.date_input("Tanggal", value=datetime.date.today())
-tip = st.number_input("Tip dari Pelanggan (jika ada):", min_value=0, value=0, step=1000)
+# Input pengguna
+nama = st.text_input("Nama")
+lokasi = st.text_input("Lokasi")
+kotor = st.number_input("Penghasilan Kotor (per hari):", min_value=0, step=1000, format="%d")
+tip = st.number_input("Tip (opsional):", min_value=0, step=1000, format="%d")
 
-# Perhitungan
-komisi = 0.10 * penghasilan_kotor
-bbm = 0.18 * penghasilan_kotor
+# Hitungan potongan dan penyisihan
+komisi = 0.10 * kotor
+bbm = 0.18 * kotor
 total_potongan = komisi + bbm
-oli = 0.02 * penghasilan_kotor
-servis_ringan = 0.015 * penghasilan_kotor
-servis_berat = 0.025 * penghasilan_kotor
-ban = 0.02 * penghasilan_kotor
-aki = 0.01 * penghasilan_kotor
-dana_darurat = 0.03 * penghasilan_kotor
-total_penyisihan = oli + servis_ringan + servis_berat + ban + aki + dana_darurat
-bersih = (penghasilan_kotor - total_potongan - total_penyisihan) + tip
 
-# Tampilkan Ringkasan
-st.markdown("---")
-st.subheader("💡 Ringkasan Harian")
-st.write(f"📆 Tanggal: {tanggal}")
-st.write(f"💰 Penghasilan Kotor: Rp {penghasilan_kotor:,.0f}")
-st.write(f"🎁 Tip: Rp {tip:,.0f}")
-st.write(f"💼 Bersih Dibawa Pulang: Rp {bersih:,.0f}")
+oli = 0.02 * kotor
+servis_ringan = 0.015 * kotor
+servis_berat = 0.025 * kotor
+ban = 0.02 * kotor
+aki = 0.01 * kotor
+darurat = 0.03 * kotor
+total_penyisihan = oli + servis_ringan + servis_berat + ban + aki + darurat
 
-# Simpan ke Sheety
-if st.button("💾 Simpan ke Google Sheet"):
-    payload = {
+dibawa_tanpa_penyisihan = kotor + tip - total_potongan
+dibawa_bersih = dibawa_tanpa_penyisihan - total_penyisihan
+tanggal = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+# Tampilkan hasil
+st.divider()
+st.subheader("📋 Rincian")
+
+st.write(f"🛵 **Komisi Maxim (10%)**: Rp {komisi:,.0f}")
+st.write(f"⛽ **BBM (18%)**: Rp {bbm:,.0f}")
+st.info(f"**Total Potongan**: Rp {total_potongan:,.0f}")
+
+st.write(f"🔧 **Oli (2%)**: Rp {oli:,.0f}")
+st.write(f"🔧 **Servis Ringan (1.5%)**: Rp {servis_ringan:,.0f}")
+st.write(f"⚙️ **Servis Berat (2.5%)**: Rp {servis_berat:,.0f}")
+st.write(f"🚗 **Ban (2%)**: Rp {ban:,.0f}")
+st.write(f"🔋 **Aki (1%)**: Rp {aki:,.0f}")
+st.write(f"💰 **Dana Darurat (3%)**: Rp {darurat:,.0f}")
+st.info(f"**Total Penyisihan**: Rp {total_penyisihan:,.0f}")
+
+st.write(f"💵 **Dibawa Pulang (tanpa penyisihan)**: Rp {dibawa_tanpa_penyisihan:,.0f}")
+st.success(f"💼 **Bersih Dibawa Pulang**: Rp {dibawa_bersih:,.0f}")
+
+# Kirim ke Sheety
+if st.button("Simpan ke Google Sheets"):
+    url = "https://api.sheety.co/3c5236c6b6460d3f9f3fcb96a92ad3aa/simulasiPendapatanOjolMaxim/sheet1"  # GANTI kalau ID kamu beda
+    body = {
         "sheet1": {
-            "tanggal": str(tanggal),
-            "penghasilan_kotor": penghasilan_kotor,
+            "nama": nama,
+            "lokasi": lokasi,
+            "kotor": kotor,
             "tip": tip,
-            "bersih_dibawa_pulang": int(bersih)
+            "totalPotongan": total_potongan,
+            "totalPenyisihan": total_penyisihan,
+            "dibawaTanpaPenyisihan": dibawa_tanpa_penyisihan,
+            "dibawaBersih": dibawa_bersih,
+            "tanggal": tanggal
         }
     }
-    res = requests.post(SHEET_URL, json=payload)
-    if res.status_code == 201:
-        st.success("✅ Data berhasil disimpan ke Sheety!")
+    response = requests.post(url, json=body)
+    if response.status_code == 200:
+        st.success("✅ Data berhasil disimpan ke Google Sheets!")
     else:
-        st.error(f"❌ Gagal menyimpan: {res.status_code}")
-
-# Ambil dan tampilkan tabel
-st.markdown("---")
-st.subheader("📊 Riwayat Simulasi")
-try:
-    resp = requests.get(SHEET_URL)
-    resp.raise_for_status()
-    data = resp.json().get("sheet1", [])
-    df = pd.DataFrame(data)
-    st.dataframe(df)
-    csv = df.to_csv(index=False).encode("utf-8")
-    st.download_button("📥 Download CSV", data=csv, file_name="riwayat_simulasi.csv", mime="text/csv")
-except Exception as e:
-    st.error("❌ Gagal memuat data dari Sheety.")
-
+        st.error(f"❌ Gagal menyimpan data. Kode: {response.status_code}")
