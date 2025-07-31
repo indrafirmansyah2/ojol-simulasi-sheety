@@ -16,7 +16,7 @@ tip = st.number_input("Tip (opsional):", min_value=0, step=500)
 if penghasilan_kotor > 0:
     # Potongan wajib
     komisi_maxim = penghasilan_kotor * 0.12  # 12%
-    bbm = penghasilan_kotor * 0.16           # 16%
+    bbm = penghasilan_kotor * 0.17           # 16%
     total_potongan = komisi_maxim + bbm
 
     # Penyisihan
@@ -34,7 +34,7 @@ if penghasilan_kotor > 0:
 
     st.subheader("🧾 Rincian Potongan")
     st.write(f"🛵 Komisi Maxim (12%): {format_rupiah(komisi_maxim)}")
-    st.write(f"⛽ BBM (16%): {format_rupiah(bbm)}")
+    st.write(f"⛽ BBM (17%): {format_rupiah(bbm)}")
     st.success(f"Total Potongan: {format_rupiah(total_potongan)}")
 
     st.subheader("🔧 Rincian Penyisihan")
